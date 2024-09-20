@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        h2 {
+            text-align: center;
+            margin-top: 5px;
+            color: #333;
+            font-size: 2em; /* Adjust font size */
+            padding: 3px; /* Add padding for spacing */
+            text-transform: uppercase; /* Make the text uppercase */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* Add shadow */
+            letter-spacing: 1px; /* Increase spacing between letters */
+            font-family: 'Arial', sans-serif; /* Change font family */
+        }
+
+        .invoice-form {
+            background-color: #fff;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .invoice-form h2 {
+            margin-bottom: 20px;
+        }
+        .invoice-form label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        .invoice-form input, .invoice-form select {
+            width: calc(100% - 15px);
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .invoice-form button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 7px 14px;
+            text-align: center;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .invoice-form button:hover {
+            background-color: #45a049;
+        }
+        .table-container {
+            overflow-y: auto;
+            max-height: 400px;
+            margin-bottom: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 800px;
+            background-color: #fff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .btn {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .editable-quantity {
+            width: 80px;
+            text-align: right;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .total-row {
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Invoice Form -->
+        <div class="invoice-form">
+            <h2>Invoice Form</h2>
+            <form id="invoice-form">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date" required>
+
+                <label for="merchant">Merchant:</label>
+                <input type="text" id="merchant" name="merchant" required>
+
+                <label for="saleRate">Sale Rate:</label>
+                <input type="number" id="saleRate" name="saleRate" required>
+
+                <!-- Invoice Items Table -->
+                <table class="invoice-items-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Quantity</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-body">
+                        <!-- Rows will be added here dynamically -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="2">Total Quantity</td>
+                            <td id="total-quantity">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <br>
+                <center>
+                <button type="button" onclick="submitForm()">Submit Invoice</button>
+            </center>
+            </form>
+        </div>
+        <h2>Available Stock</h2>
+        <!-- Sales Details Table -->
+        <div class="table-container">
+            <table id="sales-details-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Quantity</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            &copy; 2024 Chaudhary Traders. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        const scriptURLstock = 'https://script.google.com/macros/s/AKfycbz5NdrOGrjXRdvPas7az52nef5SlQpT-HiONn5bR-TzK-h-WfFYZY4VKya_MvJQd17FXg/exec'; // Replace with your Google Apps Script URL
+        const scriptURLform = 'https://script.google.com/macros/s/AKfycbwvK07aHq2lqCSNDIIJkb6YIwq1_ZjFx07596LLyRUqx4igMq1doyHwBwZPY0owMDbz/exec'; 
+        function fetchSheetData() {
+            fetch(scriptURLstock)
+                .then(response => response.json())
+                .then(data => populateSalesTable(data))
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('Failed to fetch data.');
+                });
+        }
+
+        function populateSalesTable(data) {
+            const tableBody = document.querySelector('#sales-details-table tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.date}</td>
+                    <td>${item.name}</td>
+                    <td><input type="number" class="editable-quantity" value="${item.qty}" min="1"></td>
+                    <td><button class="btn" aria-label="Add to Invoice" onclick="addToInvoice(this)">+</button></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function addToInvoice(button) {
+            const row = button.closest('tr');
+            const cells = row.getElementsByTagName('td');
+            
+            const id = cells[0].innerText;
+            const name = cells[2].innerText;
+            const quantity = cells[3].getElementsByTagName('input')[0].value;
+
+            if (quantity <= 0) {
+                alert('Quantity must be at least 1.');
+                return;
+            }
+
+            const existingRow = document.querySelector(`#invoice-items-body tr[data-id="${id}"]`);
+            if (existingRow) {
+                const existingQuantity = existingRow.querySelector('.invoice-quantity');
+                existingQuantity.innerText = parseInt(existingQuantity.innerText) + parseInt(quantity);
+            } else {
+                addNewItemToInvoice(id, name, quantity);
+            }
+
+            row.style.display = 'none'; // Hide the row after adding
+            updateTotalQuantity();
+        }
+
+        function addNewItemToInvoice(id, name, quantity) {
+            const tableBody = document.getElementById('invoice-items-body');
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-id', id);
+            newRow.innerHTML = `
+                <td>${id}</td>
+                <td>${name}</td>
+                <td class="invoice-quantity">${quantity}</td>
+                <td><button class="btn" aria-label="Remove from Invoice" onclick="removeFromInvoice(this)">-</button></td>
+            `;
+            tableBody.appendChild(newRow);
+        }
+
+        function removeFromInvoice(button) {
+            const row = button.closest('tr');
+            row.remove();
+            updateTotalQuantity();
+        }
+
+        function updateTotalQuantity() {
+            const totalQuantity = Array.from(document.querySelectorAll('#invoice-items-body .invoice-quantity'))
+                .reduce((total, element) => total + parseInt(element.innerText), 0);
+            document.getElementById('total-quantity').innerText = totalQuantity.toFixed(2);
+        }
+
+        function submitForm() {
+            const form = document.getElementById('invoice-form');
+            const formData = new FormData(form);
+            
+            const invoiceItems = Array.from(document.querySelectorAll('#invoice-items-body tr')).map(row => {
+                const id = row.children[0].innerText;
+                const name = row.children[1].innerText;
+                const quantity = row.children[2].innerText;
+                
+                return {
+                    date: formData.get('date'),
+                    merchant: formData.get('merchant'),
+                    saleRate: formData.get('saleRate'),
+                    id,
+                    name,
+                    quantity
+                };
+            });
+            
+            formData.append('invoice-items', JSON.stringify(invoiceItems));
+
+            fetch(scriptURLform, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(result => {
+                alert('Invoice submitted successfully!');
+                resetForm();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to submit the invoice.');
+            });
+        }
+
+        function resetForm() {
+            document.getElementById('invoice-form').reset();
+            document.getElementById('invoice-items-body').innerHTML = '';
+            document.getElementById('total-quantity').innerText = '0';
+        }
+
+        window.onload = fetchSheetData;
+    </script>
+</body>
+</html>
